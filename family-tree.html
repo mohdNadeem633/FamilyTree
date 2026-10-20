@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Family Tree</title>
+<style>
+:root{--bg:#f3f1ec;--card:#fffdf8;--ink:#23302a;--mute:#6b7a70;--line:#8aa092;--accent:#2f6b4f;--accent-ink:#fff;--danger:#a23b32;--border:#d5d0c4;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#16201b;--card:#1f2b25;--ink:#e8efe9;--mute:#98a89e;--line:#5d7466;--accent:#6fbf93;--accent-ink:#0f1a14;--danger:#e27a70;--border:#344239}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#16201b;--card:#1f2b25;--ink:#e8efe9;--mute:#98a89e;--line:#5d7466;--accent:#6fbf93;--accent-ink:#0f1a14;--danger:#e27a70;--border:#344239}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Iowan Old Style","Times New Roman",serif;line-height:1.4}
+button,input,textarea{font:inherit;color:inherit}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+h1{margin:0;font-size:1.4rem;font-weight:600}
+.bar{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--border);background:var(--card);padding:7px 12px;border-radius:6px;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:hover{border-color:var(--accent)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{overflow-x:auto;padding:24px 20px 60px}
+.empty{max-width:420px;margin:60px auto;text-align:center;color:var(--mute)}
+.tree{display:flex;gap:40px;justify-content:center;width:max-content;min-width:100%}
+.tree ul{display:flex;justify-content:center;padding:20px 0 0;margin:0;position:relative}
+.tree>.rootbox>ul{padding-top:0}
+.tree li{list-style:none;text-align:center;position:relative;padding:20px 8px 0}
+.tree li::before,.tree li::after{content:"";position:absolute;top:0;right:50%;width:50%;height:20px;border-top:2px solid var(--line)}
+.tree li::after{right:auto;left:50%;border-left:2px solid var(--line)}
+.tree li:only-child::before,.tree li:only-child::after{display:none}
+.tree li:only-child{padding-top:20px}
+.tree li:first-child::before,.tree li:last-child::after{border:0 none}
+.tree li:last-child::before{border-right:2px solid var(--line);border-radius:0 6px 0 0}
+.tree li:first-child::after{border-radius:6px 0 0 0}
+.tree ul ul::before{content:"";position:absolute;top:0;left:50%;border-left:2px solid var(--line);height:20px}
+.tree>.rootbox>ul>li{padding-top:0}
+.tree>.rootbox>ul>li::before,.tree>.rootbox>ul>li::after{display:none}
+.person{display:inline-block;min-width:170px;max-width:230px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:left}
+.gen{font-size:.72rem;color:var(--accent);margin-bottom:2px}
+.name{font-weight:600;font-size:1rem}
+.sp{color:var(--mute);font-size:.9rem}
+.yrs,.note{color:var(--mute);font-size:.82rem}
+.acts{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+.acts button{border:1px solid var(--border);background:transparent;border-radius:5px;padding:2px 7px;cursor:pointer;font-size:.8rem}
+.acts button:hover{border-color:var(--accent);color:var(--accent)}
+.acts .del:hover{border-color:var(--danger);color:var(--danger)}
+dialog{border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--ink);width:min(92vw,420px);padding:20px}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h2{margin:0 0 12px;font-size:1.1rem}
+label{display:block;font-size:.85rem;color:var(--mute);margin-top:10px}
+input,textarea{width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);margin-top:3px}
+textarea{min-height:220px;font-family:ui-monospace,Menlo,monospace;font-size:.8rem}
+.row{display:flex;gap:10px}.row>div{flex:1}
+.foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Family Tree</h1>
+  <div class="bar">
+    <button class="btn primary" id="addRoot">Add root ancestor</button>
+    <button class="btn" id="data">Export / import</button>
+    <button class="btn" id="clear">Clear</button>
+  </div>
+</header>
+<main id="main"></main>
+
+<dialog id="dlg">
+  <h2 id="dtitle"></h2>
+  <label>Name<input id="fName" autocomplete="off"></label>
+  <label>Spouse / partner (optional)<input id="fSpouse" autocomplete="off"></label>
+  <div class="row">
+    <div><label>Born<input id="fBorn" placeholder="e.g. 1932"></label></div>
+    <div><label>Died<input id="fDied" placeholder="blank if living"></label></div>
+  </div>
+  <label>Note<input id="fNote" autocomplete="off"></label>
+  <div class="foot"><button class="btn" id="dCancel">Cancel</button><button class="btn primary" id="dSave">Save</button></div>
+</dialog>
+
+<dialog id="dataDlg">
+  <h2>Export / import</h2>
+  <label>Copy this JSON to back up, or paste JSON and load it<textarea id="json"></textarea></label>
+  <div class="foot"><button class="btn" id="dataClose">Close</button><button class="btn primary" id="dataLoad">Load JSON</button></div>
+</dialog>
+
+<script>
+const KEY = "family-tree-v1";
+const LABELS = ["Great-great-grandparents","Great-grandparents","Grandparents","Parents","Children","Grandchildren","Great-grandchildren"];
+let roots = [];
+let ctx = null; // {mode, id}
+
+const uid = () => Math.random().toString(36).slice(2, 9);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(roots)); }catch(e){} }
+function load(){ try{ const r = localStorage.getItem(KEY); if(r) roots = JSON.parse(r) || []; }catch(e){ roots = []; } }
+
+function find(id, list = roots, parent = null){
+  for(let i = 0; i < list.length; i++){
+    const n = list[i];
+    if(n.id === id) return {node:n, list, index:i, parent};
+    const f = find(id, n.children || [], n);
+    if(f) return f;
+  }
+  return null;
+}
+
+function label(depth){ return depth < LABELS.length ? LABELS[depth] : "Generation " + (depth + 1); }
+
+function nodeHTML(n, depth){
+  const yrs = (n.born || n.died) ? `${esc(n.born) || "?"}${n.died ? "–" + esc(n.died) : ""}` : "";
+  const kids = n.children && n.children.length;
+  const isRoot = depth === 0;
+  return `<li><div class="person">
+    <div class="gen">${label(depth)}</div>
+    <div class="name">${esc(n.name)}</div>
+    ${n.spouse ? `<div class="sp">& ${esc(n.spouse)}</div>` : ""}
+    ${yrs ? `<div class="yrs">${yrs}</div>` : ""}
+    ${n.note ? `<div class="note">${esc(n.note)}</div>` : ""}
+    <div class="acts">
+      <button data-a="child" data-id="${n.id}" title="Add child">+ Child</button>
+      ${isRoot ? `<button data-a="parent" data-id="${n.id}" title="Add a generation above">+ Parent</button>` : ""}
+      <button data-a="edit" data-id="${n.id}">Edit</button>
+      ${kids ? `<button data-a="fold" data-id="${n.id}">${n.collapsed ? "Show " + n.children.length : "Hide"}</button>` : ""}
+      <button class="del" data-a="del" data-id="${n.id}">Delete</button>
+    </div></div>
+    ${kids && !n.collapsed ? `<ul>${n.children.map(c => nodeHTML(c, depth + 1)).join("")}</ul>` : ""}
+  </li>`;
+}
+
+function render(){
+  const m = $("main");
+  if(!roots.length){
+    m.innerHTML = `<div class="empty"><p>No one here yet. Start with your oldest known ancestor, then add children down to the present and beyond.</p></div>`;
+  } else {
+    m.innerHTML = `<div class="tree">${roots.map(r => `<div class="rootbox"><ul>${nodeHTML(r, 0)}</ul></div>`).join("")}</div>`;
+  }
+  save();
+}
+
+function openForm(mode, id){
+  ctx = {mode, id};
+  const e = mode === "edit" ? find(id).node : {};
+  $("dtitle").textContent = {root:"Add root ancestor", child:"Add child", parent:"Add parent", edit:"Edit person"}[mode];
+  $("fName").value = e.name || ""; $("fSpouse").value = e.spouse || "";
+  $("fBorn").value = e.born || ""; $("fDied").value = e.died || ""; $("fNote").value = e.note || "";
+  $("dlg").showModal(); $("fName").focus();
+}
+
+function saveForm(){
+  const name = $("fName").value.trim();
+  if(!name){ $("fName").focus(); return; }
+  const v = {name, spouse:$("fSpouse").value.trim(), born:$("fBorn").value.trim(), died:$("fDied").value.trim(), note:$("fNote").value.trim()};
+  const {mode, id} = ctx;
+  if(mode === "edit") Object.assign(find(id).node, v);
+  else if(mode === "root") roots.push({id:uid(), ...v, children:[]});
+  else if(mode === "child"){ const n = find(id).node; n.children = n.children || []; n.children.push({id:uid(), ...v, children:[]}); n.collapsed = false; }
+  else if(mode === "parent"){ const f = find(id); f.list[f.index] = {id:uid(), ...v, children:[f.node]}; }
+  $("dlg").close(); render();
+}
+
+$("main").addEventListener("click", e => {
+  const b = e.target.closest("button[data-a]"); if(!b) return;
+  const id = b.dataset.id, a = b.dataset.a;
+  if(a === "child" || a === "parent" || a === "edit") openForm(a, id);
+  else if(a === "fold"){ const n = find(id).node; n.collapsed = !n.collapsed; render(); }
+  else if(a === "del"){
+    const f = find(id), count = (function c(n){ return 1 + (n.children || []).reduce((s, k) => s + c(k), 0); })(f.node);
+    if(confirm(count > 1 ? `Delete ${f.node.name} and ${count - 1} descendant(s)?` : `Delete ${f.node.name}?`)){ f.list.splice(f.index, 1); render(); }
+  }
+});
+
+$("addRoot").onclick = () => openForm("root");
+$("dSave").onclick = saveForm;
+$("dCancel").onclick = () => $("dlg").close();
+$("dlg").addEventListener("keydown", e => { if(e.key === "Enter" && e.target.tagName === "INPUT"){ e.preventDefault(); saveForm(); } });
+$("clear").onclick = () => { if(roots.length && confirm("Remove the whole tree?")){ roots = []; render(); } };
+$("data").onclick = () => { $("json").value = JSON.stringify(roots, null, 2); $("dataDlg").showModal(); };
+$("dataClose").onclick = () => $("dataDlg").close();
+$("dataLoad").onclick = () => {
+  try{
+    const d = JSON.parse($("json").value);
+    if(!Array.isArray(d)) throw 0;
+    roots = d; $("dataDlg").close(); render();
+  }catch(e){ alert("That isn’t a valid family tree JSON."); }
+};
+
+load(); render();
+</script>
+</body>
+</html>
